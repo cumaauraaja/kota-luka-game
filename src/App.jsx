@@ -1,31 +1,60 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, MapPin, Briefcase, Wallet, Heart, Brain, Backpack, AlertTriangle, ShieldAlert, Activity, Eye, EyeOff, Copy, Download, Upload, RotateCcw, CheckCircle, X, Clock } from 'lucide-react';
 
-// MASUKKAN API KEY KAMU DI ANTARA TANDA KUTIP DI BAWAH INI
 const apiKey = import.meta.env.VITE_API_KEY;
 
 const SYSTEM_PROMPT = `
-Kamu adalah mesin naratif untuk sebuah game roleplay teks imersif berjudul "Kota Luka".
-Kamu bertindak sebagai Dungeon Master yang menjelma menjadi dunia, semua NPC, dan hukum realitas di dalam game.
-Patuhi aturan berikut tanpa tanpa kecuali:
+Kamu adalah mesin naratif untuk sebuah game roleplay teks imersif berjudul "Kota Luka". Kamu bertindak sebagai Dungeon Master yang menjelma menjadi dunia, semua NPC, dan hukum realitas di dalam game. Patuhi aturan berikut tanpa kecuali:
 
 1. PREMIS & DUNIA
-- Setting: Sebuah kota fiksi modern yang luas, suram, dan realistis bernama Kota Luka. Terdapat kontras sosial yang absolut: Di satu sisi adalah distrik kumuh tempat pemain berada, dan di sisi lain terdapat "Distrik Elit" yang merepresentasikan Quiet Luxury (kemewahan yang sunyi, elegan, sangat tertutup, mahal namun tidak norak). Distrik elit ini seolah tak tersentuh oleh penderitaan di distrik bawah.
+- Setting: Sebuah kota fiksi modern yang luas, suram, dan realistis bernama Kota Luka.
+- Kontras Sosial & Quiet Luxury: Terdapat kontras absolut. Saat pemain berada atau melihat Distrik Elit, deskripsikan kemewahan yang sangat minimalis, sunyi, namun mengintimidasi (Quiet Luxury). HINDARI deskripsi emas atau hal norak. Gunakan detail seperti material pakaian berbahan sutra, keheningan absolut di lobi gedung, dan bahasa tubuh karakter elite yang elegan namun merendahkan.
 - Pemain: Seorang dewasa muda (18-25 tahun) di distrik miskin.
-- Genre: Simulasi kehidupan, sandbox, drama psikologis, neo-noir. Eksplorasi tema dewasa dilakukan secara implisit, atmosferik, dan psikologis, bukan deskripsi grafis vulgar.
+- Genre: Simulasi kehidupan, sandbox, drama psikologis, neo-noir. Eksplorasi tema dewasa dilakukan secara implisit, atmosferik, dan psikologis.
 
-2. MEKANIK INTI & NPC
-- SKILL ADALAH MUTLAK (SKILL CHECKS): Setiap aksi pemain WAJIB dievaluasi berdasarkan skill yang mereka miliki di LifeSheet. Level skill (Pemula, Amatir, Mahir, Expert, Master) secara langsung menentukan persentase keberhasilan atau kualitas hasil aksi. Jika skill kurang, aksi bisa gagal, berakibat fatal, atau sukses dengan komplikasi. Jelaskan secara eksplisit dalam narasi bagaimana skill pemain (atau ketiadaannya) memengaruhi hasilnya. AI berhak menambahkan skill baru secara otomatis ke LifeSheet jika pemain mencoba hal baru.
-- Ekonomi realistis (Rupiah/Rp). Tagihan berjalan.
-- WAKTU & DURASI: Kamu WAJIB melacak pergerakan waktu di dalam LifeSheet. Setiap aktivitas memakan waktu (misal: mengobrol 10 menit, berjalan antar distrik 2 jam, tidur 8 jam). Majukan waktu secara logis ("Hari 1 - Pagi" -> "Siang" -> "Sore" -> "Malam" -> "Hari 2 - Pagi"). Sesuaikan narasi dan suasana Kota Luka dengan waktu saat itu (panas terik siang hari, atau gelap dan berbahayanya malam).
-- NPC memiliki memori (Trust, Respect, Affection -100 s/d 100).
-- PERILAKU NPC: NPC tidak boleh hanya reaktif. Mereka harus menggunakan taktik manipulasi psikologis, eksploitasi transaksional, dan melakukan eskalasi terukur berdasarkan parameter Trust dan Respect mereka terhadap pemain.
+2. MEKANIK INTI, VISUAL LOCKING & NPC
+- KONSISTENSI VISUAL (LOCKING): Kamu WAJIB terus-menerus "mengunci" penampilan karakter berdasarkan item di "inventaris" mereka. Jika pemain hanya memiliki "Pakaian kasual usang", kamu harus selalu menyebutkan bagaimana pakaian itu membuat pemain kedinginan di malam hari, membuat penjaga keamanan curiga, atau direndahkan. Berikan dorongan psikologis kuat agar pemain merasa harus upgrade gaya hidup.
+- SKILL ADALAH MUTLAK (SKILL CHECKS): Setiap aksi WAJIB dievaluasi berdasarkan skill di LifeSheet (Pemula s/d Master). Jelaskan eksplisit jika aksi sukses/gagal karena limitasi skill.
+- WAKTU & DURASI: Lacak pergerakan waktu ("Hari 1 - Pagi" -> "Siang" -> "Sore" -> "Malam" -> "Hari 2 - Pagi"). Setiap aktivitas memakan waktu (ngobrol 10 mnt, jalan 2 jam). Sesuaikan narasi (terik siang, gelapnya malam).
+- AGENDA NPC & PSIKOLOGIS: NPC TIDAK HANYA REAKTIF. Mereka memiliki agenda tersembunyi. Gunakan "Psychological Framing" saat NPC berinteraksi (contoh: Ibu Kos memanipulasi rasa bersalah pemain atau membandingkannya dengan penghuni lain untuk menjatuhkan mental). 
+- SISTEM FAKSI TAK KASAT MATA: Jika Trust pemain naik dengan satu NPC/kelompok, otomatis kurangi Respect/Trust dari faksi atau orang yang bermusuhan dengan mereka.
 
-3. FORMAT OUTPUT (SANGAT PENTING)
+3. FORMAT OUTPUT (SANGAT PENTING & WAJIB)
 Setiap balasanmu WAJIB berisi narasi dalam sudut pandang orang pertama ("Kamu").
-Di akhir narasi teks, kamu WAJIB menuliskan pertanyaan "Apa yang kamu lakukan selanjutnya?" ATAU membuat daftar 3 opsi tindakan bernomor (1, 2, 3).
+Di akhir narasi teks (tepat sebelum blok JSON), kamu WAJIB menuliskan pertanyaan "Apa yang kamu lakukan selanjutnya?" ATAU membuat daftar 3 opsi tindakan bernomor (1, 2, 3) agar pemain bisa memilih.
+
 Di bagian paling akhir balasanmu, kamu WAJIB menyertakan JSON LifeSheet yang diperbarui di dalam blok kode \`\`\`json.
-JANGAN sertakan tag [LIFESHEET] di luar blok kode. Pastikan format JSON valid.
+JANGAN sertakan tag [LIFESHEET] di luar blok kode.
+
+ATURAN JSON MUTLAK:
+- DILARANG menggunakan tanda kutip ganda (\") di dalam value string (gunakan kutip tunggal (') jika butuh).
+- DILARANG menggunakan baris baru (enter/newline) mentah di dalam value string. 
+- DILARANG menggunakan trailing comma (koma di ujung list/object). 
+- JSON ini di-parse oleh mesin, jika salah sintaks game akan ERROR.
+
+Format Wajib JSON di akhir pesan:
+\`\`\`json
+{
+  "nama": "nama pemain",
+  "gender": "gender pemain",
+  "usia": 20,
+  "pekerjaan": "Pengangguran",
+  "waktu": "Hari 1 - Pagi",
+  "uang": 45000,
+  "skills": {
+    "Observasi": {"level": "Pemula", "deskripsi": "Baru bisa melihat yang jelas-jelas saja."},
+    "Persuasi": {"level": "Pemula", "deskripsi": "Gugup saat berbohong atau meyakinkan orang."}
+  },
+  "inventaris": ["Ponsel pintar retak"],
+  "tempat_tinggal": {"tipe": "Kamar Kos", "lokasi": "Distrik Pinggiran"},
+  "hubungan_npc": {
+    "Ibu Kos": {"trust": 0, "respect": -10, "affection": -20, "catatan": "Marah karena tunggakan."}
+  },
+  "reputasi_global": "Bukan Siapa-siapa",
+  "status_kriminal": "Bersih",
+  "ringkasan_narasi_terakhir": "..."
+}
+\`\`\`
 `;
 
 const INITIAL_STORY = `Udara di kamar berukuran 3x3 meter ini terasa pengap, menempel di kulitmu bersama aroma debu dan sisa mi instan semalam. Sinar matahari pagi yang pucat berjuang menembus jendela berkaca buram, mencetak bayangan terali besi yang memanjang di atas kasur tipismu yang berderit. Di luar, sayup-sayup terdengar deru mesin berpadu dengan klakson tak sabaran—napas parau Kota Luka yang tak pernah peduli pada siapa pun yang tertinggal.
@@ -38,7 +67,7 @@ Sebuah pesan singkat masuk.
 **Pengirim: Ibu Kos**
 *"Tunggakan bulan ini jatuh tempo besok pagi. Kalau tidak ada Rp 500.000, silakan angkat kaki dan bawa barang-barangmu."*
 
-Kamu menelan ludah. Kamu tahu persis tidak ada uang sebanyak itu. Dompetmu menipis, dan sisa saldo di rekening mungkin hanya cukup untuk makan nasi bungkus tiga hari ke depan.
+Kamu menelan ludah. Kamu tahu persis tidak ada uang sebanyak itu. Dompetmu menipis, dan sisa saldo di rekening mungkin hanya cukup untuk makan nasi bungkus tiga hari ke depan. Pakaian kasual usangmu yang tergeletak di lantai mengingatkan betapa jauhnya kamu dari kehidupan yang layak di kota ini.
 
 Sebelum kita mulai menghadapi kerasnya Kota Luka, **Siapa namamu dan apa jenis kelaminmu?**`;
 
@@ -64,14 +93,39 @@ const INITIAL_LIFESHEET = {
   ringkasan_narasi_terakhir: "Terbangun dan mendapat ancaman pengusiran."
 };
 
+const fetchWithRetry = async (url, options, maxRetries = 5) => {
+  let retries = 0;
+  const delays = [1000, 2000, 4000, 8000, 16000];
+
+  while (retries < maxRetries) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      if (retries === maxRetries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, delays[retries]));
+      retries++;
+    }
+  }
+};
+
 export default function App() {
-  const [messages, setMessages] = useState([{ role: 'model', content: INITIAL_STORY }]);
+  const [messages, setMessages] = useState([
+    { role: 'model', content: INITIAL_STORY }
+  ]);
   const [lifeSheet, setLifeSheet] = useState(INITIAL_LIFESHEET);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showStatsMobile, setShowStatsMobile] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
+  // Modal States
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -87,38 +141,107 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 3000);
   };
 
+  // --- SAVE & LOAD SYSTEM (FILE TXT) ---
+  const handleExportClick = () => {
+    setShowExportModal(true);
+  };
+
+  const downloadSaveFile = () => {
+    const data = { messages, lifeSheet };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
+    const blob = new Blob([encoded], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const date = new Date().toISOString().slice(0,10);
+    link.download = `KotaLuka_Save_${date}.txt`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    setShowExportModal(false);
+    showToast('File simpanan berhasil diunduh!');
+  };
+
+  const handleImportClick = () => {
+    setSelectedFile(null);
+    setShowImportModal(true);
+  };
+
+  const processImport = () => {
+    if (!selectedFile) {
+      showToast('Pilih file simpanan terlebih dahulu.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target.result;
+        const decodedString = decodeURIComponent(atob(content.trim()));
+        const parsedData = JSON.parse(decodedString);
+        
+        if (parsedData.messages && parsedData.lifeSheet) {
+          setMessages(parsedData.messages);
+          setLifeSheet(parsedData.lifeSheet);
+          setShowImportModal(false);
+          setSelectedFile(null);
+          showToast('Progres permainan berhasil dimuat!');
+        } else {
+          throw new Error("Struktur data tidak valid");
+        }
+      } catch (e) {
+        console.error("Import error:", e);
+        showToast('Gagal memuat: File simpanan tidak valid atau rusak.');
+      }
+    };
+    reader.readAsText(selectedFile);
+  };
+
   const handleReset = () => {
     setMessages([{ role: 'model', content: INITIAL_STORY }]);
     setLifeSheet(INITIAL_LIFESHEET);
+    setShowResetModal(false);
     showToast('Permainan diulang dari awal.');
   };
 
   const parseAIResponse = (text) => {
     const jsonRegex = /```json\s*([\s\S]*?)\s*```/i;
     const match = text.match(jsonRegex);
+    
     let narrative = text;
     let newLifeSheet = null;
 
     if (match) {
       try {
-        newLifeSheet = JSON.parse(match[1]);
+        // SANITIZER KETAT: Memperbaiki kesalahan format umum yang dibuat LLM AI
+        let jsonString = match[1];
+        
+        // 1. Hapus trailing comma pada objek atau array (cth: "kriminal": "Bersih", } -> "kriminal": "Bersih" })
+        jsonString = jsonString.replace(/,\s*(?=[\]}])/g, '');
+        
+        // 2. Ganti semua karakter newline/enter mentah di dalam JSON menjadi spasi (mencegah unescaped string error)
+        jsonString = jsonString.replace(/\n/g, ' ').replace(/\r/g, '');
+
+        newLifeSheet = JSON.parse(jsonString);
         narrative = text.replace(jsonRegex, '').replace(/\[LIFESHEET\]/gi, '').trim();
       } catch (e) {
-        console.error("Gagal membaca struktur LifeSheet dari AI:", e);
+        console.error("Gagal membaca struktur LifeSheet dari AI (JSON rusak):", e);
+        console.log("RAW JSON STR:", match[1]);
+        // Tampilkan pesan kegagalan halus ke user jika parse gagal, tanpa membuat game crash
+        showToast("Kesalahan sinkronisasi LifeSheet. Menggunakan data lama.");
       }
     }
+
     return { narrative, newLifeSheet };
   };
 
   const handleSendMessage = async (e) => {
     e?.preventDefault();
     if (!inputValue.trim() || isLoading) return;
-
-    if (apiKey === "MASUKKAN_API_KEY_AI_STUDIO_KAMU_DISINI" || apiKey.trim() === "") {
-        setMessages(prev => [...prev, { role: 'user', content: inputValue }, { role: 'model', content: "*[Sistem: API Key belum dimasukkan di baris kode ke-5!]*", isError: true }]);
-        setInputValue('');
-        return;
-    }
 
     const userText = inputValue.trim();
     setInputValue('');
@@ -130,35 +253,26 @@ export default function App() {
     try {
       const recentMessages = newMessages.slice(-5);
       
-      let apiContents = recentMessages.map(msg => ({
+      const apiContents = recentMessages.map(msg => ({
         role: msg.role === 'model' ? 'model' : 'user',
         parts: [{ text: msg.content }]
       }));
 
-      while (apiContents.length > 0 && apiContents[0].role === 'model') {
-          apiContents.shift();
-      }
-
-      const dynamicSystemPrompt = `${SYSTEM_PROMPT}\n\n[STATUS LIFESHEET SAAT INI (ACUAN FAKTA)]\nIni adalah status pemain saat ini. Gunakan data ini sebagai acuan mutlak:\n${JSON.stringify(lifeSheet, null, 2)}`;
+      const dynamicSystemPrompt = `${SYSTEM_PROMPT}\n\n[STATUS LIFESHEET SAAT INI (ACUAN FAKTA)]\nIni adalah status pemain saat ini. Gunakan data ini sebagai acuan mutlak untuk kondisinya:\n${JSON.stringify(lifeSheet, null, 2)}`;
 
       const payload = {
         systemInstruction: { parts: [{ text: dynamicSystemPrompt }] },
         contents: apiContents,
       };
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
       
-      const response = await fetch(url, {
+      const data = await fetchWithRetry(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) {
-          throw new Error(`HTTP Error: ${response.status}`);
-      }
-
-      const data = await response.json();
       const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (responseText) {
@@ -170,10 +284,10 @@ export default function App() {
       }
 
     } catch (error) {
-      console.error("Kesalahan API:", error);
+      console.error("API Error:", error);
       setMessages(prev => [...prev, { 
         role: 'model', 
-        content: `*[Sistem Error: Koneksi terputus (${error.message}). Silakan coba tindakanmu lagi.]*`,
+        content: "*[Sistem Error: Koneksi ke Kota Luka terputus. Silakan coba tindakanmu lagi.]*",
         isError: true
       }]);
     } finally {
@@ -185,9 +299,22 @@ export default function App() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
   };
 
+  // Dinamika Waktu UI (Efek Ambient)
+  const getTimeAmbientClass = () => {
+    const w = (lifeSheet.waktu || "").toLowerCase();
+    if (w.includes("siang")) return "bg-amber-900/10"; // Panas/Pucat
+    if (w.includes("sore")) return "bg-orange-950/20"; // Senja
+    if (w.includes("malam")) return "bg-red-950/20"; // Gelap/Bahaya
+    return "bg-transparent"; // Pagi/Default
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-300 font-sans overflow-hidden relative">
+    <div className="flex flex-col h-screen bg-slate-950 text-slate-300 font-sans overflow-hidden relative transition-colors duration-1000">
       
+      {/* Time Ambient Overlay Effect */}
+      <div className={`absolute inset-0 pointer-events-none transition-colors duration-1000 z-0 ${getTimeAmbientClass()}`} />
+
+      {/* Toast Notification */}
       {toastMessage && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 bg-slate-800 border border-amber-500/50 text-amber-400 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm transition-all animate-bounce">
           <CheckCircle size={16} />
@@ -195,17 +322,95 @@ export default function App() {
         </div>
       )}
 
+      {/* Modal Ekspor (Save) */}
+      {showExportModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-lg shadow-xl max-w-sm w-full flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-emerald-500 flex items-center gap-2"><Download size={20}/> Ekspor Simpanan</h3>
+              <button onClick={() => setShowExportModal(false)} className="text-slate-500 hover:text-white"><X size={20}/></button>
+            </div>
+            <p className="text-slate-400 mb-6 text-sm">
+              Unduh progres permainanmu sebagai file <strong>.txt</strong>. Simpan file ini di memori HP Anda untuk memuatnya kembali nanti.
+            </p>
+            <div className="flex justify-end gap-3 mt-auto">
+              <button onClick={downloadSaveFile} className="flex-1 py-3 flex items-center justify-center gap-2 font-semibold bg-emerald-700 hover:bg-emerald-600 text-white rounded-md transition">
+                <Download size={18} /> Unduh File (.txt)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Impor (Load) */}
+      {showImportModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-lg shadow-xl max-w-sm w-full flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2"><Upload size={20}/> Impor Simpanan</h3>
+              <button onClick={() => setShowImportModal(false)} className="text-slate-500 hover:text-white"><X size={20}/></button>
+            </div>
+            <p className="text-slate-400 mb-4 text-sm">
+              Pilih file <strong>.txt</strong> simpanan Kota Luka dari File Manager Anda untuk melanjutkan permainan.
+            </p>
+            <input 
+              type="file" 
+              accept=".txt"
+              onChange={(e) => setSelectedFile(e.target.files[0])}
+              className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-800 file:text-amber-500 hover:file:bg-slate-700 mb-6 cursor-pointer border border-slate-700 rounded-md p-1 bg-slate-950 focus:outline-none focus:border-amber-500"
+            />
+            <div className="flex justify-end gap-3 mt-auto">
+              <button onClick={() => setShowImportModal(false)} className="px-4 py-3 font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition">Batal</button>
+              <button onClick={processImport} disabled={!selectedFile} className="flex-1 py-3 flex items-center justify-center gap-2 font-semibold bg-amber-700 hover:bg-amber-600 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-md transition">
+                <Upload size={18} /> Muat Game
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reset */}
+      {showResetModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+            <h3 className="text-lg font-bold text-red-500 mb-2 flex items-center gap-2"><AlertTriangle size={20}/> Peringatan</h3>
+            <p className="text-slate-300 mb-6 text-sm">Apakah kamu yakin ingin mengulang dari awal? Progres saat ini yang belum di-ekspor akan hilang selamanya ditelan Kota Luka.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowResetModal(false)} className="px-4 py-2 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition">Batal</button>
+              <button onClick={handleReset} className="px-4 py-2 text-sm font-semibold bg-red-900 hover:bg-red-800 text-white rounded-md transition">Ya, Ulangi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center z-10 shrink-0 shadow-md">
+      <header className={`bg-slate-900/90 backdrop-blur-sm border-b border-slate-800 p-4 flex justify-between items-center z-10 shrink-0 shadow-md transition-colors duration-1000 ${lifeSheet.waktu?.toLowerCase().includes('malam') ? 'border-b-red-900/30' : ''}`}>
         <div>
           <h1 className="text-xl md:text-2xl font-bold tracking-wider text-amber-500 uppercase font-serif">Kota Luka</h1>
           <p className="text-xs text-slate-500 tracking-widest hidden md:block">v1.2.0 // IMMERSIVE ENGINE</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={handleReset} className="flex items-center gap-2 p-2 text-xs font-semibold rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-red-400 transition border border-transparent hover:border-slate-600" title="Ulang Permainan">
-            <RotateCcw size={14} /> Ulang
-          </button>
+          {/* Controls Desktop */}
+          <div className="hidden md:flex gap-2 mr-2 border-r border-slate-700 pr-4">
+            <button onClick={handleExportClick} className="flex items-center gap-2 p-2 text-xs font-semibold rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-emerald-400 transition border border-transparent hover:border-slate-600" title="Ekspor Simpanan">
+              <Download size={14} /> Ekspor
+            </button>
+            <button onClick={handleImportClick} className="flex items-center gap-2 p-2 text-xs font-semibold rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-amber-400 transition border border-transparent hover:border-slate-600" title="Impor Simpanan">
+              <Upload size={14} /> Impor
+            </button>
+            <button onClick={() => setShowResetModal(true)} className="flex items-center gap-2 p-2 text-xs font-semibold rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-red-400 transition border border-transparent hover:border-slate-600" title="Ulang Permainan">
+              <RotateCcw size={14} /> Ulang
+            </button>
+          </div>
+
+          {/* Controls Mobile Icons Only */}
+          <div className="flex md:hidden gap-1 mr-2 border-r border-slate-700 pr-2">
+            <button onClick={handleExportClick} className="p-2 rounded-md bg-slate-800 text-slate-300 hover:text-emerald-400 transition"><Download size={18} /></button>
+            <button onClick={handleImportClick} className="p-2 rounded-md bg-slate-800 text-slate-300 hover:text-amber-400 transition"><Upload size={18} /></button>
+            <button onClick={() => setShowResetModal(true)} className="p-2 rounded-md bg-slate-800 text-slate-300 hover:text-red-400 transition"><RotateCcw size={18} /></button>
+          </div>
+
           <button 
             onClick={() => setShowStatsMobile(!showStatsMobile)}
             className="lg:hidden p-2 rounded-md bg-amber-900/50 border border-amber-700/50 text-amber-500 hover:bg-amber-800/50 transition flex items-center gap-2"
@@ -216,7 +421,7 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative z-10">
         
         {/* Left Column: Story/Chat */}
         <div className={`flex flex-col flex-1 w-full transition-all duration-300 ${showStatsMobile ? 'hidden lg:flex' : 'flex'}`}>
@@ -229,7 +434,7 @@ export default function App() {
                       ? 'bg-amber-900/40 text-amber-100 border border-amber-700/50 rounded-br-none' 
                       : msg.isError 
                         ? 'bg-red-950/50 text-red-400 border border-red-900 rounded-bl-none italic'
-                        : 'bg-slate-900 text-slate-300 border border-slate-800 rounded-bl-none font-serif'
+                        : 'bg-slate-900/90 backdrop-blur-sm text-slate-300 border border-slate-800 rounded-bl-none font-serif'
                     }`}
                 >
                   {msg.content}
@@ -239,7 +444,7 @@ export default function App() {
             
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-slate-900 border border-slate-800 rounded-lg rounded-bl-none p-4 flex gap-2 items-center text-slate-500">
+                <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-800 rounded-lg rounded-bl-none p-4 flex gap-2 items-center text-slate-500">
                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-bounce"></div>
                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
@@ -251,14 +456,14 @@ export default function App() {
           </div>
 
           {/* Input Area */}
-          <div className="p-4 bg-slate-900 border-t border-slate-800 shrink-0">
+          <div className="p-4 bg-slate-900/90 backdrop-blur-sm border-t border-slate-800 shrink-0">
             <form onSubmit={handleSendMessage} className="flex gap-2 max-w-4xl mx-auto">
               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Apa yang kamu lakukan?"
-                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-200 transition"
+                className="flex-1 bg-slate-950/80 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-slate-200 transition"
                 disabled={isLoading}
               />
               <button
@@ -274,7 +479,7 @@ export default function App() {
         </div>
 
         {/* Right Column: LIFESHEET (Stats) */}
-        <div className={`w-full lg:w-80 xl:w-96 bg-slate-900/80 border-l border-slate-800 flex flex-col shrink-0 overflow-y-auto 
+        <div className={`w-full lg:w-80 xl:w-96 bg-slate-900/80 backdrop-blur-md border-l border-slate-800 flex flex-col shrink-0 overflow-y-auto 
           ${showStatsMobile ? 'absolute inset-0 z-20' : 'hidden lg:flex'}`}
         >
           <div className="p-5 space-y-6">
@@ -305,14 +510,14 @@ export default function App() {
               <div className="flex items-start gap-3 text-slate-400 text-sm">
                 <MapPin size={16} className="text-slate-500 mt-0.5" />
                 <div>
-                  <p className="text-slate-300">{lifeSheet.tempat_tinggal?.tipe}</p>
-                  <p className="text-xs">{lifeSheet.tempat_tinggal?.lokasi}</p>
+                  <p className="text-slate-300">{lifeSheet.tempat_tinggal.tipe}</p>
+                  <p className="text-xs">{lifeSheet.tempat_tinggal.lokasi}</p>
                 </div>
               </div>
             </div>
 
             {/* Reputasi & Kriminal */}
-            <div className="space-y-2 p-3 bg-slate-950 rounded-lg border border-slate-800 text-sm">
+            <div className="space-y-2 p-3 bg-slate-950/50 rounded-lg border border-slate-800 text-sm">
               <div className="flex items-center gap-2">
                 <Activity size={14} className="text-blue-400" />
                 <span className="text-slate-400">Reputasi:</span>
@@ -330,13 +535,13 @@ export default function App() {
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <Brain size={14} /> Skills
               </h3>
-              {lifeSheet.skills && Object.keys(lifeSheet.skills).length > 0 ? (
+              {Object.keys(lifeSheet.skills).length > 0 ? (
                 <div className="space-y-2">
                   {Object.entries(lifeSheet.skills).map(([name, data], idx) => (
-                    <div key={idx} className="bg-slate-800/50 p-2 rounded text-sm">
+                    <div key={idx} className="bg-slate-800/40 p-2 rounded text-sm">
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-semibold text-slate-200">{name}</span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-amber-900/50 text-amber-300 border border-amber-800/50">
+                        <span className="text-xs px-2 py-0.5 rounded bg-amber-900/30 text-amber-300 border border-amber-800/50">
                           {data.level}
                         </span>
                       </div>
@@ -354,7 +559,7 @@ export default function App() {
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <Backpack size={14} /> Inventaris
               </h3>
-              {lifeSheet.inventaris && lifeSheet.inventaris.length > 0 ? (
+              {lifeSheet.inventaris.length > 0 ? (
                 <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
                   {lifeSheet.inventaris.map((item, idx) => (
                     <li key={idx} className="marker:text-slate-600">{item}</li>
@@ -370,7 +575,7 @@ export default function App() {
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <Heart size={14} /> Hubungan
               </h3>
-              {lifeSheet.hubungan_npc && Object.keys(lifeSheet.hubungan_npc).length > 0 ? (
+              {Object.keys(lifeSheet.hubungan_npc).length > 0 ? (
                 <div className="space-y-3">
                   {Object.entries(lifeSheet.hubungan_npc).map(([name, stats], idx) => (
                     <div key={idx} className="border-l-2 border-slate-700 pl-3">
