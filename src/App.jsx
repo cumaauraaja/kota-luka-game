@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, MapPin, Briefcase, Wallet, Heart, Brain, Backpack, AlertTriangle, ShieldAlert, Activity, Eye, EyeOff, Copy, Download, Upload, RotateCcw, CheckCircle, X, Clock } from 'lucide-react';
 
 // MASUKKAN API KEY KAMU DI ANTARA TANDA KUTIP DI BAWAH INI
-const apiKey = "AIzaSyB9DMjjQclh2qS3l0kdgwuOmvI2DeacCP8"; 
+const apiKey = import.meta.env.VITE_API_KEY;
 
 const SYSTEM_PROMPT = `
 Kamu adalah mesin naratif untuk sebuah game roleplay teks imersif berjudul "Kota Luka".
